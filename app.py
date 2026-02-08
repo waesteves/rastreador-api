@@ -1,10 +1,10 @@
 """
 API Localizador - Recebe localização e serve mapa
+Configurado para deploy no Render.com
 """
 import json
 import os
 import random
-import socket
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -14,7 +14,7 @@ import requests
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder="../static")
+app = Flask(__name__, static_folder="static")
 CORS(app, resources={r"/api/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
 # Armazena as últimas localizações por device_id
@@ -247,6 +247,7 @@ def remover_dispositivo(device_id):
             del localizacoes[device_id]
         if device_id in historico:
             del historico[device_id]
+            salvar_historico()
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"erro": str(e)}), 500
@@ -478,25 +479,7 @@ def arquivos_estaticos(path):
     return send_from_directory(app.static_folder, path)
 
 
-def get_local_ip():
-    """Obtém o IP da máquina na rede local"""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
-
-
 if __name__ == "__main__":
     Path(app.static_folder).mkdir(parents=True, exist_ok=True)
-    porta = 5000
-    ip = get_local_ip()
-    print("=" * 50)
-    print(f"API Localizador rodando em http://{ip}:{porta}")
-    print(f"Mapa: http://{ip}:{porta}/")
-    print(f"Configure no app: IP={ip} Porta={porta}")
-    print("=" * 50)
-    app.run(host="0.0.0.0", port=porta, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG", "0") == "1")
